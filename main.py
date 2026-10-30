@@ -135,6 +135,22 @@ class ExecutableMetadataScanner:
             self.report['error'] = f"Error scanning PE file: {e}"
             logging.error(f"Error scanning PE file: {e} - {self.filepath}")
 
+
+    def _record_lief_summary(self, binary):
+        """Fill entry point, libraries and PIE fields from a lief binary."""
+        self.report['entry_point'] = binary.entrypoint
+        # lief returns library names as plain strings in current builds;
+        # older examples read .name off each entry, which crashes on a str.
+        self.report['imported_libraries'] = [
+            lib if isinstance(lib, str) else lib.name for lib in binary.libraries
+        ]
+        # has_nx says the stack is non-executable. It says nothing about
+        # position independence, so it was the wrong value for is_pie.
+        # Both attributes are plain bools in current lief and methods in
+        # some older builds, so each is called only if it is callable.
+        self.report['is_pie'] = bool(binary.is_pie() if callable(binary.is_pie) else binary.is_pie)
+        self.report['has_nx'] = bool(binary.has_nx() if callable(binary.has_nx) else binary.has_nx)
+
     def _scan_elf(self):
         """
         Scans an ELF file.
@@ -148,14 +164,12 @@ class ExecutableMetadataScanner:
                 return
 
             self.report['file_type'] = 'ELF'
-            self.report['entry_point'] = binary.entrypoint
-            self.report['imported_libraries'] = [lib.name for lib in binary.libraries]
-            self.report['is_pie'] = binary.has_nx()
+            self._record_lief_summary(binary)
 
-        except lief.parser_error as e:
-            self.report['error'] = f"LIEF parser error: {e}"
-            logging.error(f"LIEF parser error: {e} - {self.filepath}")
         except Exception as e:
+            # No lief.parser_error clause here: current lief has no such
+            # attribute, and naming it in an except clause raises an
+            # AttributeError that replaces the real scan error.
             self.report['error'] = f"Error scanning ELF file: {e}"
             logging.error(f"Error scanning ELF file: {e} - {self.filepath}")
 
@@ -173,13 +187,7 @@ class ExecutableMetadataScanner:
                 return
 
             self.report['file_type'] = 'Mach-O'
-            self.report['entry_point'] = binary.entrypoint
-            self.report['imported_libraries'] = [lib.name for lib in binary.libraries]
-            self.report['is_pie'] = binary.has_nx()
-
-        except lief.lief_errors.parser_error as e:
-             self.report['error'] = f"LIEF parser error: {e}"
-             logging.error(f"LIEF parser error: {e} - {self.filepath}")
+            self._record_lief_summary(binary)
 
         except Exception as e:
             self.report['error'] = f"Error scanning Mach-O file: {e}"
@@ -253,24 +261,15 @@ def main():
             logging.info(f"Report saved to: {args.output}")
         except Exception as e:
             logging.error(f"Error saving report to file: {e}")
+            sys.exit(1)
     else:
         print(json.dumps(report, indent=4))
 
+    # A report carrying an error (unsupported type, parse failure) is a
+    # failed scan. It used to exit 0, so scripts could not tell it apart
+    # from a clean scan.
+    if 'error' in report:
+        sys.exit(1)
+
 if __name__ == "__main__":
     main()
-
-# Usage Examples:
-# 1. Scan a PE file:
-#    python artex_ExecutableMetadataScanner.py malware.exe
-#
-# 2. Scan a PE file with YARA rules and save the report to a file:
-#    python artex_ExecutableMetadataScanner.py malware.exe -r malware_rules.yara -o malware_report.json
-#
-# 3. Enable verbose logging:
-#    python artex_ExecutableMetadataScanner.py malware.exe -v
-
-# Offensive Tools:
-# This tool can be used to quickly analyze potentially malicious executables.
-# YARA rules can be written to detect specific packing techniques, known malware signatures,
-# or other suspicious characteristics.  The extracted metadata (imported libraries, timestamps, etc.)
-# can be used to generate IOCs for threat intelligence purposes.
