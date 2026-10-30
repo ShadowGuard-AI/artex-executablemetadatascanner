@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 # artex-ExecutableMetadataScanner
 Scans executable files (PE, ELF, Mach-O) to extract metadata such as compiler information, timestamps, imported libraries, and embedded resources.  Uses `pefile` (for PE), `lief` (for ELF/Mach-O), and `yara-python` to identify suspicious characteristics based on YARA rules. Outputs a report highlighting potential red flags. - Focused on Automated extraction of indicators of compromise (IOCs) and metadata from document and binary files. Focus on speed and accuracy, allowing quick triage of potentially malicious artifacts.
 
