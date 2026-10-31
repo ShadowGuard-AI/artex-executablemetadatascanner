@@ -31,6 +31,8 @@ class ExecutableMetadataScanner:
         self.filepath = filepath
         self.yara_rules_path = yara_rules_path
         self.report = {}
+        self.yara_compile_failed = False
+        self.yara_compile_error = None
 
     def _load_yara_rules(self):
         """
@@ -47,6 +49,8 @@ class ExecutableMetadataScanner:
             return rules
         except yara.Error as e:
             logging.error(f"Error compiling YARA rules: {e}")
+            self.yara_compile_failed = True
+            self.yara_compile_error = str(e)
             return None
 
     def scan(self):
@@ -74,7 +78,12 @@ class ExecutableMetadataScanner:
             # Run YARA rules if provided
             if self.yara_rules_path:
                 rules = self._load_yara_rules()
-                if rules:
+                if self.yara_compile_failed:
+                    # A rules file the operator named could not be compiled.
+                    # Record it in the report, the way a match failure already
+                    # records yara_error, instead of leaving no trace.
+                    self.report['yara_error'] = f"Error compiling YARA rules: {self.yara_compile_error}"
+                elif rules:
                     try:
                         with open(self.filepath, 'rb') as f:
                             matches = rules.match(data=f.read())
@@ -269,6 +278,13 @@ def main():
     # failed scan. It used to exit 0, so scripts could not tell it apart
     # from a clean scan.
     if 'error' in report:
+        sys.exit(1)
+
+    # A YARA rules file the operator named that could not be compiled means
+    # the YARA part of the scan was not performed, so the run exits 1 even
+    # though the rest of the report was produced.
+    if scanner.yara_compile_failed:
+        logging.error("Exiting with failure: the named YARA rules file could not be compiled, so no YARA scan was performed.")
         sys.exit(1)
 
 if __name__ == "__main__":
