@@ -69,6 +69,10 @@ class ExecutableMetadataScanner:
                 elif header.startswith(b'\x7fELF'):
                     self._scan_elf()
                 elif header.startswith(b'\xFE\xED\xFA\xCF') or header.startswith(b'\xCF\xFA\xED\xFE') or header.startswith(b'\xFE\xED\xFE\xCF'):
+                    # Only thin Mach-O magics are listed. A fat
+                    # binary, the CAFEBABE kind that bundles several
+                    # architectures, falls to the unsupported branch
+                    # below even though lief could parse it.
                     self._scan_mach_o() # Added checks for various Mach-O headers.
                 else:
                     self.report['error'] = "Unsupported file type"
@@ -99,6 +103,11 @@ class ExecutableMetadataScanner:
             self.report['error'] = f"An unexpected error occurred: {e}"
             logging.exception(f"An unexpected error occurred while scanning: {self.filepath}")
         finally:
+            # Returning from finally swallows anything still in flight,
+            # including an interrupt, and hands back whatever partial
+            # report exists. That is the contract main relies on: a
+            # report always comes back, and the error key inside it is
+            # where failure is announced.
             return self.report
 
     def _scan_pe(self):
@@ -109,6 +118,10 @@ class ExecutableMetadataScanner:
             pe = pefile.PE(self.filepath)
 
             self.report['file_type'] = 'PE'
+            # The PE timestamp goes in as the raw epoch integer, never
+            # converted to a date. It is also a field the linker writes
+            # and builders routinely fake or zero, so even converted it
+            # would be a claim, not a fact about when this was built.
             self.report['timestamp'] = pe.FILE_HEADER.TimeDateStamp
             self.report['compiler'] = self._get_compiler_info_pe(pe)
             self.report['imported_libraries'] = [dll.decode('utf-8', 'ignore') for dll in pe.get_libraries()]
