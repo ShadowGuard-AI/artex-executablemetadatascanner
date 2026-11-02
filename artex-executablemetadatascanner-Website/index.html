@@ -3,164 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Artex Executablemetadatascanner: what it is, how it runs, where it stops</title>
-<meta name="description" content="Artex Executablemetadatascanner is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.">
+<title>artex-executablemetadatascanner: The Submarine Cable Repair Grapnel</title>
+<meta name="description" content="Scans executable files in PE, ELF, and Mach-O formats to extract metadata and highlight potential red flags.">
 <style>
-:root {
-  --bg: #121418; --panel: #1c2028; --ink: #e8ecf0;
-  --mut: #252b36;
-  --acc: #5cc8e0; --acc2: #f0a05c;
-  --line: #1c2028;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink);
-  font-family: 'Palatino Linotype', Palatino, serif; line-height: 1.55; }
-code, pre, .mono { font-family: 'Menlo', monospace; }
-a { color: var(--acc2); }
-.hero { padding: 3rem 6vw 1rem; }
-.hero img.banner { width: 100%; height: auto; border: 1px solid var(--line);
-  border-radius: 10px; }
-.logo { width: 92px; height: 92px; border-radius: 18px;
-  border: 1px solid var(--line); }
-h1 { font-size: 2.4rem; margin: 0.4em 0 0.1em; }
-h2 { border-bottom: 2px solid var(--acc); padding-bottom: 0.2em;
-  margin-top: 2em; }
-.lede { font-size: 1.15rem; max-width: 62ch; }
-main { padding: 0 6vw 3rem; max-width: 1180px; margin: 0 auto; }
-.grid { display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
-.card { background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 1rem 1.2rem; }
-.card.pop { animation: rise 0.7s ease both; }
-@keyframes rise { from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; } }
-pre.code { background: #101014; color: #e8e6df; padding: 1rem 1.2rem;
-  border-radius: 12px; overflow-x: auto; font-size: 0.86rem;
-  border-left: 5px solid var(--acc); }
-table { border-collapse: collapse; width: 100%; }
-td, th { border-bottom: 1px solid var(--line); padding: 0.45rem 0.6rem;
-  text-align: left; }
-.shots { display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.shots img { width: 100%; height: auto; border: 1px solid var(--line);
-  border-radius: 10px; background: #f4f1e8; }
-footer { padding: 2rem 6vw; border-top: 1px solid var(--line);
-  color: var(--mut); }
-.rail { display: flex; gap: 1.2rem; align-items: flex-start; }
-.rail nav { position: sticky; top: 1rem; min-width: 180px; }
-@media (max-width: 760px) { .rail { flex-direction: column; }
-  .rail nav { position: static; } }
-@media (prefers-reduced-motion: reduce) {
-  .card.pop { animation: none; } * { scroll-behavior: auto; } }
+@font-face{font-family:'Bagel Fat One';src:url('fonts/BagelFatOne.ttf') format('truetype');}
+@font-face{font-family:'Bitter';src:url('fonts/Bitter.ttf') format('truetype');}
+:root{--black:#080a0c;--ash:#e2e2dc;--grey:#b9b9b2;--yel:#e8c424;--red:#c42a26;--ink:#101214}
+*{box-sizing:border-box}body{margin:0;background:var(--black);color:var(--ash);font-family:'Bitter',serif;line-height:1.65}
+h1,h2,h3{font-family:'Bagel Fat One',sans-serif;font-weight:400}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;background:var(--black)}
+.hero img.heroimg{width:100%;height:58vh;object-fit:cover;display:block}
+.hero .in{padding:1rem 6vw 2rem;max-width:1120px;margin:0 auto;width:100%}
+.hero h1{font-size:1.6rem;word-break:break-all}
+.logo{width:200px;border:2px solid var(--grey)}
+main{padding:0 6vw 3rem;max-width:1120px;margin:0 auto}
+nav{display:flex;gap:.9rem;flex-wrap:wrap;margin:1.2rem 0}
+.linkbtn{display:inline-block;text-decoration:none;color:var(--ink);font-family:'Bagel Fat One',sans-serif;font-size:.9rem;padding:.7rem 1.2rem;background:var(--ash);border-radius:50%/62%;box-shadow:inset 0 0 0 3px var(--black),inset 0 0 0 5px var(--grey);transition:transform .08s}
+.linkbtn:hover{box-shadow:inset 0 0 0 3px var(--black),inset 0 0 0 5px var(--grey),inset 0 0 12px var(--yel)}
+.linkbtn:active{transform:scaleY(.88)}
+.linkbtn:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.crate{background:linear-gradient(155deg,#d9d9d2,#c2c2ba);color:var(--ink);border:8px solid #2a2c2e;padding:.4rem 1.5rem 1.3rem;margin:1.8rem 0;position:relative}
+.crate::after{content:'';position:absolute;right:0;bottom:0;width:64px;height:64px;background:linear-gradient(45deg,transparent 49%,#2a2c2e 49%,#2a2c2e 56%,transparent 56%)}
+.crate h2{border-bottom:2px solid #2a2c2e;padding-bottom:.35rem}
+pre{background:#141618;color:var(--ash);padding:1rem;overflow-x:auto}
+a{color:#8f1d1a}
+a::before{content:'';display:inline-block;width:18px;height:5px;margin-right:.45em;background:repeating-linear-gradient(90deg,#8a8a84 0 3px,transparent 3px 6px);vertical-align:3px}
+a:hover::before{transform:translateY(-2px)}
+.linkbtn::before{content:none}
+.sound{height:16px;margin:2.2rem 0;background:repeating-linear-gradient(to right,var(--grey) 0 2px,transparent 2px 90px),linear-gradient(var(--grey),var(--grey));background-size:100% 12px,100% 2px;background-position:0 0,0 5px;background-repeat:no-repeat;position:relative}
+.sound::after{content:'';position:absolute;left:50%;top:0;width:3px;height:14px;background:var(--yel)}
+.row{display:flex;gap:1rem;padding:.5rem 0;border-bottom:1px solid #8f8f88}
+.row b{font-family:'Bagel Fat One',sans-serif;min-width:60px}
+.warn{background:var(--red);color:#fff;padding:.6rem 1rem;font-weight:700}
+.depth{font-family:'Bagel Fat One',sans-serif;color:var(--yel)}
+footer{padding:1rem 6vw 2.4rem;max-width:1120px;margin:0 auto}
 </style>
 </head>
-<body class="layout-grid">
-<!-- This page exists for artex-executablemetadatascanner alone: the layout (console-grid),
-     the colors, and the type were picked for this project, not
-     shared with the other project pages. The code block below is
-     copied from the file it names, line for line. If it looks
-     plain, that is because the project is plain, and I would
-     rather the page match the project than dress it up. The one
-     thing I will not do here is oversell: what this project does
-     not do is stated on the page, not hidden from it. -->
+<body>
 <header class="hero">
-  <img class="logo" src="assets/logo.png" alt="Artex Executablemetadatascanner logo">
-  <img class="banner" src="assets/banner.png" alt="">
-  <h1>Artex Executablemetadatascanner</h1>
-  <p class="mono"><a href="https://github.com/ShadowGuard-AI/artex-executablemetadatascanner">github.com/ShadowGuard-AI/artex-executablemetadatascanner</a></p>
+<img class="heroimg" src="assets/intro-banner.png" alt="A grapnel dragging through black water over furrowed silt toward a broken cable, no text">
+<div class="in">
+<img class="logo" src="assets/logo.png" alt="A four pronged repair grapnel holding a caught armoured cable, above the project name in ash white">
+<h1>artex-executablemetadatascanner</h1>
+<p>A sounding line, read downward. Each topic hangs at its own depth mark, and the visitor goes down rather than across.</p>
+<nav>
+<a class="linkbtn" href="#quarry">begin the drag</a>
+<a class="linkbtn" href="#quarry">name the formats</a>
+<a class="linkbtn" href="#tackle">list what was lifted</a>
+<a class="linkbtn" href="#failure">read the YARA rules</a>
+<a class="linkbtn" href="#deck">save the JSON report</a>
+<a class="linkbtn" href="#deck">turn on verbose logging</a>
+</nav>
+</div>
 </header>
-
 <main>
-  <section class="rail">
-    <nav aria-label="on this page">
-      <p class="mono"><a href="#run">Run it</a><br>
-      <a href="#files">The files</a><br>
-      <a href="#sheets">The sheets</a><br>
-      <a href="https://github.com/ShadowGuard-AI/artex-executablemetadatascanner">The repo</a></p>
-    </nav>
-    <div>
-      <p class="lede">Artex Executablemetadatascanner is one of my projects. The README in the repo is short, so this page sticks to what the files themselves show.</p>
-      <div class="grid">
-        <div class="card pop"><h3>What it is</h3>
-          <p>Artex Executablemetadatascanner: 5 files, 297 counted
-          lines across Python 275, Markdown 19, Text 3. One job, done in the
-          open, in files you can read.</p></div>
-        <div class="card pop"><h3>The biggest piece</h3>
-          <p><code>main.py</code> carries the most
-          lines. If the project grows, that file is where the growth
-          lands first, for better or worse.</p></div>
-        <div class="card pop"><h3>The honest gap</h3>
-          <p>No test files yet. That is the honest gap, and the roadmap in the visuals folder says what the first one should cover.</p></div>
-      </div>
-      <section id="run">
-        <h2>Run it</h2>
-        <p>The repo README has the exact commands for this one. The
-        shape is the shape for most of my projects: clone it, read the
-        top file first so you know what will happen, then run it on
-        something you do not mind breaking.</p>
-        <p class="mono">$ git clone https://github.com/ShadowGuard-AI/artex-executablemetadatascanner.git<br>$ cd artex-executablemetadatascanner</p>
-      </section>
-      
-  <section aria-label="real code">
-    <h2>The code, as it sits in the repo</h2>
-    <p>From <code>main.py</code>, line 16 on. I did
-    not tidy it for the page. What you see is what the file has.</p>
-    <pre class="code"><code>logging.basicConfig(level=logging.INFO, format=&#x27;%(asctime)s - %(levelname)s - %(message)s&#x27;)
-
-class ExecutableMetadataScanner:
-    &quot;&quot;&quot;
-    Scans executable files to extract metadata and identify suspicious characteristics.
-    &quot;&quot;&quot;
-
-    def __init__(self, filepath, yara_rules_path=None):
-        &quot;&quot;&quot;
-        Initializes the scanner.
-
-        Args:
-            filepath (str): Path to the executable file.
-            yara_rules_path (str, optional): Path to the YARA rules file. Defaults to None.
-        &quot;&quot;&quot;
-        self.filepath = filepath
-        self.yara_rules_path = yara_rules_path
-        self.report = {}
-
-    def _load_yara_rules(self):
-        &quot;&quot;&quot;
-        Loads YARA rules from the specified file.</code></pre>
-  </section>
-      <section id="files">
-        <h2>The files that matter</h2>
-        <table><tr><th>File</th><th>Lines</th></tr>
-        <tr><td><code>main.py</code></td><td>275</td></tr>
-        <tr><td><code>README.md</code></td><td>19</td></tr>
-        <tr><td><code>requirements.txt</code></td><td>3</td></tr>
-        <tr><td><code>banner.png</code></td><td>0</td></tr>
-        <tr><td><code>logo.png</code></td><td>0</td></tr>
-        </table>
-        <p>Names doing the work: <span class="mono">ExecutableMetadataScanner, setup_argparse, main, __init__, _load_yara_rules, scan, _scan_pe, _record_lief_summary</span>.</p>
-      </section>
-      <section id="sheets">
-        <h2>Drawn by hand</h2>
-        <p>I sketch my projects on notebook paper so I have to
-        understand them well enough to draw them. The full set,
-        with the counts and how they were counted, is the
-        <a href="https://github.com/ShadowGuard-AI/artex-executablemetadatascanner/tree/main/artex-executablemetadatascanner-Visuals">artex-executablemetadatascanner-Visuals</a>
-        folder in the repo. Nothing is drawn over the binder holes.
-        That is a rule, not a style.</p>
-        <div class="shots">
-          <img src="assets/architecture.png" alt="Hand drawn architecture sheet for Artex Executablemetadatascanner">
-          <img src="assets/flowchart.png" alt="Hand drawn flowchart sheet for Artex Executablemetadatascanner">
-          <img src="assets/product-map.png" alt="Hand drawn product map sheet for Artex Executablemetadatascanner">
-        </div>
-      </section>
-    </div>
-  </section>
+<section class="crate" id="quarry"><p class="depth">Shallowest mark</p><h2>The Quarry</h2>
+<p>artex-executablemetadatascanner scans executable files in PE, ELF, and Mach-O formats to extract metadata such as compiler information, timestamps, imported libraries, and embedded resources, and outputs a report highlighting potential red flags.</p>
+<p>Its stated focus: automated extraction of indicators of compromise and metadata from document and binary files, with a focus on speed and accuracy, allowing quick triage of potentially malicious artifacts.</p>
+</section>
+<div class="sound"></div>
+<section class="crate" id="tackle"><p class="depth">Next mark down</p><h2>The Tackle</h2>
+<div class="row"><b>pefile</b><span>Used for PE files.</span></div>
+<div class="row"><b>lief</b><span>Used for ELF and Mach-O files.</span></div>
+<div class="row"><b>yara-python</b><span>Used to identify suspicious characteristics based on YARA rules.</span></div>
+<p class="warn">Warning strip: the YARA link carries the failure rules at the next mark. If its rules cannot be compiled, or the file does not exist, the run exits 1.</p>
+</section>
+<div class="sound"></div>
+<section class="crate" id="failure"><p class="depth">Deepest working mark</p><h2>The Failure Rules</h2>
+<p>If a YARA rules file named with -r cannot be compiled, the report carries a yara_error field describing the compile failure and the run exits 1, because the YARA part of the scan was not performed.</p>
+<p>A rules file that does not exist also exits 1.</p>
+<p>No retry or partial report behaviour is promised, because the source promises none.</p>
+</section>
+<div class="sound"></div>
+<section class="crate" id="haul"><h2>The Haul Up</h2>
+<pre>git clone https://github.com/ShadowStrikeHQ/artex-executablemetadatascanner</pre>
+<pre>./artex-executablemetadatascanner [params]</pre>
+<p>Plain notice: none of the four documented controls names the executable file to be scanned, so the route by which a file is handed to the scanner is not spelled out in the source.</p>
+<p><a href="https://github.com/ShadowGuard-AI/artex-executablemetadatascanner">The repository on GitHub</a></p>
+</section>
+<div class="sound"></div>
+<section class="crate" id="deck"><h2>The Sorting Deck</h2>
+<div class="row"><b>-h</b><span>Shows a help message and exits.</span></div>
+<div class="row"><b>-r</b><span>Gives the path to a YARA rules file and is marked optional.</span></div>
+<div class="row"><b>-o</b><span>Gives the path to save the JSON report and is also marked optional.</span></div>
+<div class="row"><b>-v</b><span>Enables verbose logging.</span></div>
+</section>
+<div class="sound"></div>
+<section class="crate"><h2>Bottom of the Line</h2>
+<p>No example report, sample metadata listing, or sample red flag appears on this page, because none appears in the source.</p>
+<pre>Copyright (c) ShadowStrikeHQ</pre>
+<p>No licence is named on that line.</p>
+</section>
 </main>
-<footer>
-  <p>Artex Executablemetadatascanner is one of my projects. This page was written
-  from the repo itself on 2026-10-30: the counts are the
-  repo's counts, the code is the repo's code, and the gaps are the
-  repo's gaps.</p>
-</footer>
+<footer><p>Theme: The Submarine Cable Repair Grapnel. Type: Bagel Fat One for headings, Bitter for reading, both SIL Open Font License 1.1. No lettering reference was recorded for this project, so none is embedded.</p></footer>
 </body>
 </html>
