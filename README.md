@@ -1,10 +1,10 @@
-![The drag itself with nothing named: furrowed silt, a grapnel mid drag, and a broken cable lying ahead of the prongs](intro-banner.png)
+![A corroded brass plate in macro on riveted black iron, heavily weathered and scratched, with a red chalk circle around its upper left rivet against the dark stone behind](intro-banner.png)
 
 # artex-executablemetadatascanner
 
-![A repair ship at night: the lit stern and winch, the cable dropping to the grapnel, and the project name painted on the stern board](banner.png)
+![A row of black iron boilers in a stone yard, an inspector leaning over the nearest blank brass plate with a stub of red chalk, drawing a large oval across it, a notebook in his other hand](banner.png)
 
-![A repair grapnel head on holding a caught cable, the heading plate](logo.png)
+![A blank burnished brass plate riveted at its four corners to a black riveted iron plate, a red chalk circle drawn around the lower left rivet, the heading plate](logo.png)
 
 ![A grapnel dragging across silt, pausing as a prong crosses the broken cable, shell fragments drifting in the near band](scene.svg)
 
